@@ -13,4 +13,10 @@ Current priorities:
 - forum integration
 - accessibility and notifications
 
+Deployment:
+- GitHub repository: CaptainXack/VMUSF
+- Vercel project: vmusf-experience-v2
+- Production branch: main
+- Git deployment connection re-established on 2026-08-10
+
 Supabase project reference: ziiivcuynidpmvosxvkj
