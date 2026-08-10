@@ -1,0 +1,13 @@
+(() => {
+  const uid=()=>window.VMUSF_AUTH?.user?.id||'';
+  const token=()=>window.VMUSF_AUTH?.session?.access_token||'';
+  const h=()=>({apikey:SUPABASE_KEY,'Content-Type':'application/json',...(token()?{Authorization:'Bearer '+token()}:{})});
+  async function api(path){const r=await fetch(SUPABASE_URL+'/rest/v1/'+path,{headers:h()});const t=await r.text();let d=[];if(t)try{d=JSON.parse(t)}catch{}if(!r.ok)throw new Error(d?.message||'Could not load case status');return d}
+  const s=v=>esc(String(v??''));
+  const fmt=d=>{try{return new Date(d).toLocaleString('en-GB')}catch{return s(d)}};
+  const money=n=>n==null?'Not calculated':'£'+Number(n).toFixed(2);
+  async function status(caseId){if(!uid()||!caseId)return;let deadlines=[],ents=[];try{[deadlines,ents]=await Promise.all([api('vmusf_case_deadlines?select=deadline_type,label,due_at,status,source_kind,source_url,metadata&case_id=eq.'+encodeURIComponent(caseId)+'&user_id=eq.'+encodeURIComponent(uid())+'&order=due_at.asc'),api('vmusf_case_entitlements?select=entitlement_key,authority,status,eligibility_from,estimated_amount,official_amount,reason,source_url,last_checked_at&case_id=eq.'+encodeURIComponent(caseId)+'&user_id=eq.'+encodeURIComponent(uid())+'&order=updated_at.desc')])}catch(e){console.warn('Case status',e)}
+    openModal('Deadlines & compensation',`<div class="result"><h3>Tracked deadlines</h3>${deadlines.length?deadlines.map(d=>`<div class="metric"><b>${s(d.label)}</b><small>${fmt(d.due_at)} · ${s(d.status)} · ${s(d.source_kind)}</small></div>`).join(''):'<div class="empty">No deadline has been created for this case yet.</div>'}<h3 style="margin-top:24px">Potential entitlements</h3>${ents.length?ents.map(x=>`<div class="metric"><b>${s(String(x.entitlement_key).replaceAll('_',' '))}</b><small>${s(x.status)} · ${s(x.authority)} · ${x.official_amount!=null?'official '+money(x.official_amount):x.estimated_amount!=null?'estimate '+money(x.estimated_amount):'amount not calculated'}${x.reason?' · '+s(x.reason):''}</small></div>`).join(''):'<div class="empty">No compensation or other entitlement is currently recorded for this case.</div>'}<div class="notice">VMUSF keeps provider promises, official deadlines and compensation assessments separate. An estimate is not shown as money owed until the required facts and current official rule have been checked.</div></div>`)}
+  document.addEventListener('click',e=>{const b=e.target.closest?.('[data-case-status]');if(!b)return;e.preventDefault();status(b.dataset.caseStatus)},true);
+  window.VMUSF_CASE_STATUS={open:status};
+})();
