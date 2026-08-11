@@ -19,7 +19,7 @@ if(!document.getElementById('vm-readbar')){document.body.insertAdjacentHTML('bef
 sync()}
 function maybeSpeakHelp(){if(!speakHelp||current!=='help'||synth?.speaking)return;const els=[...document.querySelectorAll('#app .assist-message,#app .assist-turn,#app .assistant-message,#app .chat-message,#app .lead')].filter(x=>x.offsetParent!==null);const el=els.at(-1);if(!el||el.dataset.vmusfSpoken)return;const text=el.innerText?.trim();if(!text||text.length<3)return;el.dataset.vmusfSpoken='1';utter=new SpeechSynthesisUtterance(text.slice(0,3500));utter.rate=rate;utter.lang='en-GB';synth.speak(utter)}
 root.dataset.easyRead=pref.easy?'on':'off';root.dataset.readingFocus=pref.focus?'on':'off';enhance();
-const observer=new MutationObserver(()=>{enhance();setTimeout(maybeSpeakHelp,250)});observer.observe(document.body,{subtree:true,childList:true});
+let pending=false;const schedule=()=>{if(pending)return;pending=true;setTimeout(()=>{pending=false;if(speakHelp)maybeSpeakHelp()},300)};const app=document.getElementById('app');if(app)new MutationObserver(schedule).observe(app,{subtree:true,childList:true});const modal=document.getElementById('modalbody');if(modal)new MutationObserver(schedule).observe(modal,{subtree:true,childList:true});
 window.addEventListener('beforeunload',()=>stop(false));document.addEventListener('click',e=>{if(e.target.closest?.('[data-r],[data-a],[data-ma]')&&!e.target.closest?.('#access,#vm-readbar'))setTimeout(()=>{if(synth?.speaking)stop();},40)},true);
 window.VMUSF_ACCESS_PLUS={read:start,stop,setEasy,setFocus,setSpeakHelp};
 })();
