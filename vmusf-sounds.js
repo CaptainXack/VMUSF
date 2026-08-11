@@ -38,5 +38,41 @@
   setInterval(()=>{if(document.visibilityState==='visible')pollNotifications()},12000);
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')pollNotifications()});
   const oldToast=window.toastMsg; if(typeof oldToast==='function'){window.toastMsg=function(msg){const s=String(msg||'').toLowerCase();if(/solved|solution marked/.test(s))play('solved');else if(/saved|updated|posted|added|synced|bookmarked/.test(s))play('saved');else if(/report|moderation/.test(s))play('moderation');return oldToast.apply(this,arguments)}}
+
+  /* Runtime QA fixes: broad Assist choices previously fed generic labels back into
+     the classifier and could loop forever. Rewrite only the value, never the label. */
+  const routeAnswers={
+    'Broadband or Wi-Fi':'hub fault',
+    'TV':'tv down',
+    'Bill or price':'wrong bill',
+    'Complaint':'complaint not logged',
+    'Contract or leaving':'minimum term dispute',
+    'Something else':'something else details'
+  };
+  function repairAssistChoices(root=document){
+    root.querySelectorAll?.('[data-assist-answer]').forEach(b=>{
+      const visible=(b.textContent||'').trim();
+      if(routeAnswers[visible])b.dataset.assistAnswer=routeAnswers[visible];
+    });
+  }
+  function keepAssistAtLatest(){
+    const log=document.getElementById('assist-log');
+    if(!log)return;
+    requestAnimationFrame(()=>{log.scrollTop=log.scrollHeight;});
+  }
+  let qaTimer=0;
+  const qaObserver=new MutationObserver(ms=>{
+    clearTimeout(qaTimer);
+    qaTimer=setTimeout(()=>{
+      for(const m of ms)m.addedNodes?.forEach(n=>{if(n.nodeType===1)repairAssistChoices(n)});
+      repairAssistChoices();
+      keepAssistAtLatest();
+    },20);
+  });
+  qaObserver.observe(document.body,{childList:true,subtree:true});
+  repairAssistChoices();
+  document.addEventListener('submit',e=>{if(e.target?.id==='assist-form')setTimeout(keepAssistAtLatest,40)},true);
+  document.addEventListener('click',e=>{if(e.target.closest?.('[data-assist-answer]'))setTimeout(keepAssistAtLatest,40)},true);
+
   window.VMUSF_SOUNDS={play,prefs,save,unlock};
 })();
